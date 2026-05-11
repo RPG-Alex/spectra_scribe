@@ -51,7 +51,6 @@ impl<B: Backend> MatthewsCorrelationMetric<B> {
 }
 
 impl<B: Backend> Default for MatthewsCorrelationMetric<B> {
-    /// Creates a new metric instance with default values.
     fn default() -> Self {
         let threshold = 0.5;
         let name = Arc::new(format!("MCC Score @ Threshold({})", threshold));
