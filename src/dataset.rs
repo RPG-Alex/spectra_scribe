@@ -48,7 +48,10 @@ impl SpectraData {
             unreachable!("Vec subsetting failed")
         };
 
-        Self { dataset: subset.to_vec(), class_weights: self.class_weights.clone() }
+        Self {
+            dataset: subset.to_vec(),
+            class_weights: self.class_weights.clone(),
+        }
     }
 }
 fn load_spectra() -> Result<Vec<Spectra>, SpectraError> {
@@ -99,6 +102,9 @@ fn get_class_weights(data: &[Spectra]) -> Vec<f32> {
         }
     }
     for weight in output.iter_mut() {
+        if *weight == 0.0 {
+            *weight = 1e-3;
+        }
         *weight = n_samples / (*weight * n_classes);
     }
     output

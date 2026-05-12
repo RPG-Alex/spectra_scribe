@@ -161,5 +161,3 @@ impl<B: Backend> Batcher<B, Spectra, SpectraScribeBatch<B>> for SpectraScribeBat
         SpectraScribeBatch { spectra, targets }
     }
 }
-
-

@@ -1,25 +1,24 @@
 #![recursion_limit = "256"]
 
 mod data;
+mod dataset;
+mod error;
 mod inference;
 mod mcc;
 mod model;
-mod training;
 mod output;
-mod error;
-mod dataset;
+mod training;
 
 use crate::{
-    data::ELEMENT_COUNT, dataset::SpectraData, error::SpectraError, inference::create_confusion_matrices, model::ModelConfig, training::TrainingConfig
+    data::ELEMENT_COUNT, dataset::SpectraData, error::SpectraError,
+    inference::create_confusion_matrices, model::ModelConfig, training::TrainingConfig,
 };
-use std::fs::File;
-use csv::Writer;
 use burn::{
-    backend::{
-        Autodiff, Wgpu,
-    },
-    optim::AdamConfig
+    backend::{Autodiff, Wgpu},
+    optim::AdamConfig,
 };
+use csv::Writer;
+use std::fs::File;
 
 fn main() -> Result<(), SpectraError> {
     type MyBackend = Wgpu<f32, i32>;

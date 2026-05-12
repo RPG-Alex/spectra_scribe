@@ -1,11 +1,14 @@
 use crate::{
-    data::{ELEMENTS, ELEMENT_COUNT, Spectra, SpectraScribeBatcher},
+    data::{ELEMENT_COUNT, ELEMENTS, Spectra, SpectraScribeBatcher},
     output::ConfusionMatrix,
     training::TrainingConfig,
 };
 
 use burn::{
-    data::dataloader::batcher::Batcher, record::{CompactRecorder, Recorder}, tensor::Transaction, prelude::*
+    data::dataloader::batcher::Batcher,
+    prelude::*,
+    record::{CompactRecorder, Recorder},
+    tensor::Transaction,
 };
 
 pub fn infer<B: Backend>(

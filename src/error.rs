@@ -7,7 +7,7 @@ pub enum SpectraError {
     InvalidArray,
     Mascot(MascotError),
     SimilarityComputation(SimilarityComputationError),
-    Io(std::io::Error)
+    Io(std::io::Error),
 }
 
 impl From<MascotError> for SpectraError {
