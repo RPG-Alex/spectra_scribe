@@ -68,8 +68,23 @@ pub struct TrainingConfig {
 }
 
 impl TrainingConfig {
-    pub fn new_with_values(model: ModelConfig, num_epochs: usize, batch_size: usize, num_workers: usize, seed: u64, learning_rate: f64) -> Self {
-        Self { model, optimizer: AdamConfig::new(), num_epochs, batch_size, num_workers, seed, learning_rate }
+    pub fn new_with_values(
+        model: ModelConfig,
+        num_epochs: usize,
+        batch_size: usize,
+        num_workers: usize,
+        seed: u64,
+        learning_rate: f64,
+    ) -> Self {
+        Self {
+            model,
+            optimizer: AdamConfig::new(),
+            num_epochs,
+            batch_size,
+            num_workers,
+            seed,
+            learning_rate,
+        }
     }
 }
 
@@ -98,15 +113,15 @@ pub fn train<B: AutodiffBackend>(
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(train_dataset.train(config.seed));
+        .build(train_dataset.clone());
 
-    let dataloader_test = DataLoaderBuilder::new(batcher.clone())
+    let dataloader_validation = DataLoaderBuilder::new(batcher.clone())
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(validation_dataset.test(config.seed));
+        .build(validation_dataset.clone());
 
-    let training = SupervisedTraining::new(artifact_dir, dataloader_train, dataloader_test)
+    let training = SupervisedTraining::new(artifact_dir, dataloader_train, dataloader_validation)
         .metrics((
             MatthewsCorrelationMetric::new(),
             LossMetric::new(),

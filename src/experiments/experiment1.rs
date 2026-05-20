@@ -1,8 +1,6 @@
 use std::fs::File;
 
-use burn::{
-    backend::{Autodiff, Wgpu},
-};
+use burn::backend::{Autodiff, Wgpu};
 use csv::Writer;
 
 use crate::{
@@ -17,7 +15,7 @@ use crate::{
 
 pub fn run() -> Result<(), SpectraError> {
     // Training values
-    let epoch:usize = 10;
+    let epoch: usize = 10;
     let batch: usize = 64;
     let workers: usize = 4;
     let seed: u64 = 42;
@@ -33,31 +31,30 @@ pub fn run() -> Result<(), SpectraError> {
     let dataset = SpectraData::new()?;
     println!("Finished loading spectra");
 
-    let class_indices = observed_class_indices(&dataset.dataset);
-    println!("Observed classes: {}", class_indices.len());
-
-    for &index in &class_indices {
-        println!("{}", ELEMENTS[index])
-    }
     let model_config = ModelConfig::new(ELEMENT_COUNT, 100)
         .with_class_weights(Some(dataset.class_weights.clone()));
 
+    let train_dataset = dataset.train(seed);
+    let validation_dataset = dataset.test(seed);
     crate::training::train::<MyAutodiffBackend>(
         artifact_dir,
-        &dataset,
+        &train_dataset,
+        &validation_dataset,
         TrainingConfig::new_with_values(model_config, epoch, batch, workers, seed, rate),
         device.clone(),
     );
 
-    let results =
-        crate::inference::infer::<MyBackend>(artifact_dir, &device, dataset.test(42).dataset);
+    let validation_items = validation_dataset.dataset.clone();
 
-    let confusion_matrices = create_confusion_matrices(results, &dataset.test(42).dataset, 0.5);
+    let results =
+        crate::inference::infer::<MyBackend>(artifact_dir, &device, validation_items.clone());
+
+    let confusion_matrices = create_confusion_matrices(results, &validation_items, 0.5)?;
 
     let file = File::create("results/experiment1_results.csv")?;
     let mut wtr = Writer::from_writer(file);
 
-    for matrix in confusion_matrices? {
+    for matrix in confusion_matrices {
         wtr.serialize(matrix)?;
     }
 

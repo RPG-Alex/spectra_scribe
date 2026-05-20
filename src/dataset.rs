@@ -10,6 +10,7 @@ use crate::{
     error::SpectraError,
 };
 
+#[derive(Clone)]
 pub struct SpectraData {
     pub(crate) dataset: Vec<SpectrumSample>,
     pub(crate) class_weights: Vec<f32>,

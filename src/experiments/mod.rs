@@ -12,5 +12,9 @@ pub(crate) fn observed_class_indices(samples: &[SpectrumSample]) -> Vec<usize> {
             }
         }
     }
-    observed.into_iter().enumerate().filter_map(|(index, present)| present.then_some(index)).collect()
+    observed
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, present)| present.then_some(index))
+        .collect()
 }

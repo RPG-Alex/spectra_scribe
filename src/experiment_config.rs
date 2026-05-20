@@ -1,4 +1,4 @@
-use crate::data::SpectrumSample;
+use crate::{data::SpectrumSample, holdout::Holdout};
 
 /// Defines the methods for setting up an experiment
 pub trait ExperimentConfig {
@@ -13,5 +13,5 @@ pub trait ExperimentConfig {
     fn validation_size(&self) -> f32 {
         1.0 - self.training_size()
     }
-    fn generate_holdouts(&self, dataset: &[SpectrumSample],) -> Vec<Self::HoldoutType>;
+    fn generate_holdouts(&self, dataset: &[SpectrumSample]) -> Vec<Self::HoldoutType>;
 }

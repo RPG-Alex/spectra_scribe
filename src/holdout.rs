@@ -1,6 +1,6 @@
 use elements_rs::Element;
 
-use crate::{data::SpectrumSample, holdout};
+use crate::data::SpectrumSample;
 
 /// Defines the methods for a single holdout
 pub trait Holdout {
@@ -21,7 +21,6 @@ pub trait Holdout {
         self.split().1.len()
     }
 }
-
 
 pub struct RandomHoldout {
     train: Vec<SpectrumSample>,
