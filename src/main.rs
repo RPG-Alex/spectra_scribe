@@ -5,7 +5,7 @@ use crate::{error::SpectraError, experiments::experiment1};
 mod data;
 mod dataset;
 mod error;
-mod experimental_setup;
+mod experiment_config;
 mod experiments;
 mod holdout;
 mod inference;

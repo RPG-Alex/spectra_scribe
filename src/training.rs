@@ -60,16 +60,17 @@ impl<B: Backend> InferenceStep for Model<B> {
 pub struct TrainingConfig {
     pub model: ModelConfig,
     pub optimizer: AdamConfig,
-    #[config(default = 1)]
     pub num_epochs: usize,
-    #[config(default = 64)]
     pub batch_size: usize,
-    #[config(default = 4)]
     pub num_workers: usize,
-    #[config(default = 42)]
     pub seed: u64,
-    #[config(default = 1.0e-4)]
     pub learning_rate: f64,
+}
+
+impl TrainingConfig {
+    pub fn new_with_values(model: ModelConfig, num_epochs: usize, batch_size: usize, num_workers: usize, seed: u64, learning_rate: f64) -> Self {
+        Self { model, optimizer: AdamConfig::new(), num_epochs, batch_size, num_workers, seed, learning_rate }
+    }
 }
 
 fn create_artifact_dir(artifact_dir: &str) {
@@ -80,7 +81,8 @@ fn create_artifact_dir(artifact_dir: &str) {
 
 pub fn train<B: AutodiffBackend>(
     artifact_dir: &str,
-    dataset: &SpectraData,
+    train_dataset: &SpectraData,
+    validation_dataset: &SpectraData,
     config: TrainingConfig,
     device: B::Device,
 ) {
@@ -96,13 +98,13 @@ pub fn train<B: AutodiffBackend>(
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(dataset.train(config.seed));
+        .build(train_dataset.train(config.seed));
 
     let dataloader_test = DataLoaderBuilder::new(batcher.clone())
         .batch_size(config.batch_size)
         .shuffle(config.seed)
         .num_workers(config.num_workers)
-        .build(dataset.test(config.seed));
+        .build(validation_dataset.test(config.seed));
 
     let training = SupervisedTraining::new(artifact_dir, dataloader_train, dataloader_test)
         .metrics((
@@ -116,7 +118,7 @@ pub fn train<B: AutodiffBackend>(
 
     let model = config
         .model
-        .init::<B>(&device, Some(dataset.class_weights.clone()));
+        .init::<B>(&device, Some(train_dataset.class_weights.clone()));
     let result = training.launch(Learner::new(
         model,
         config.optimizer.init(),

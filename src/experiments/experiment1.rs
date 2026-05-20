@@ -2,7 +2,6 @@ use std::fs::File;
 
 use burn::{
     backend::{Autodiff, Wgpu},
-    optim::AdamConfig,
 };
 use csv::Writer;
 
@@ -17,11 +16,18 @@ use crate::{
 };
 
 pub fn run() -> Result<(), SpectraError> {
+    // Training values
+    let epoch:usize = 10;
+    let batch: usize = 64;
+    let workers: usize = 4;
+    let seed: u64 = 42;
+    let rate: f64 = 1.0e-4;
+
     type MyBackend = Wgpu<f32, i32>;
     type MyAutodiffBackend = Autodiff<MyBackend>;
 
     let device = burn::backend::wgpu::WgpuDevice::default();
-    let artifact_dir = "./first_attempt";
+    let artifact_dir = "./experiments/experiment1";
 
     println!("Loading spectra.");
     let dataset = SpectraData::new()?;
@@ -39,7 +45,7 @@ pub fn run() -> Result<(), SpectraError> {
     crate::training::train::<MyAutodiffBackend>(
         artifact_dir,
         &dataset,
-        TrainingConfig::new(model_config, AdamConfig::new()),
+        TrainingConfig::new_with_values(model_config, epoch, batch, workers, seed, rate),
         device.clone(),
     );
 
@@ -48,7 +54,7 @@ pub fn run() -> Result<(), SpectraError> {
 
     let confusion_matrices = create_confusion_matrices(results, &dataset.test(42).dataset, 0.5);
 
-    let file = File::create("results.csv")?;
+    let file = File::create("results/experiment1_results.csv")?;
     let mut wtr = Writer::from_writer(file);
 
     for matrix in confusion_matrices? {

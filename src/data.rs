@@ -1,6 +1,5 @@
 use burn::{data::dataloader::batcher::Batcher, prelude::*};
 use molecular_formulas::prelude::*;
-
 #[derive(Clone, Default)]
 pub struct SpectraScribeBatcher {}
 
