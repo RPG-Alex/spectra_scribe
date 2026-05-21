@@ -1,6 +1,7 @@
 use crate::{
     data::{SpectraScribeBatch, SpectraScribeBatcher},
     dataset::SpectraData,
+    holdout::{self, Holdout},
     mcc::MatthewsCorrelationMetric,
     model::{Model, ModelConfig},
 };
@@ -144,4 +145,22 @@ pub fn train<B: AutodiffBackend>(
         .model
         .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())
         .expect("Trained model should be saved successfully");
+}
+
+pub fn train_holdout<B, H>(
+    artifact_dir: &str,
+    holdout: &H,
+    config: TrainingConfig,
+    device: B::Device,
+) where
+    B: AutodiffBackend,
+    H: Holdout,
+{
+    train::<B>(
+        artifact_dir,
+        holdout.train_dataset(),
+        holdout.validation_dataset(),
+        config,
+        device,
+    );
 }

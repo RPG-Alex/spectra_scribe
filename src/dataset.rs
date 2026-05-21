@@ -10,7 +10,7 @@ use crate::{
     error::SpectraError,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SpectraData {
     pub(crate) dataset: Vec<SpectrumSample>,
     pub(crate) class_weights: Vec<f32>,
@@ -45,7 +45,7 @@ impl SpectraData {
         let mut rng = ChaCha8Rng::seed_from_u64(seed);
         data.shuffle(&mut rng);
         let len = data.len();
-        let Some(subset) = self.dataset.get((len * 8 / 10)..len) else {
+        let Some(subset) = data.get((len * 8 / 10)..len) else {
             unreachable!("Vec subsetting failed")
         };
 
