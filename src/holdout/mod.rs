@@ -2,14 +2,14 @@ pub mod basic_holdout;
 
 pub use basic_holdout::BasicHoldout;
 
-use elements_rs::Element;
-
 use crate::{data::SpectrumSample, dataset::SpectraData};
 
 /// Defines the methods for a single holdout
 pub trait Holdout {
-    /// Returns a slice of [`Element`] that constitute the class
-    fn classes(&self) -> &[Element];
+    /// Number of output classes this holdout trains/evaluates.
+    fn num_classes(&self) -> usize {
+        self.class_indices().len()
+    }
     /// Returns the indices of the classes from the `ELEMENTS` constant
     fn class_indices(&self) -> &[usize];
     /// The iteration of the holdout

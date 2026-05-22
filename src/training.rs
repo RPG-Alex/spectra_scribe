@@ -1,6 +1,5 @@
 use crate::{
     data::{SpectraScribeBatch, SpectraScribeBatcher},
-    dataset::SpectraData,
     holdout::Holdout,
     mcc::MatthewsCorrelationMetric,
     model::{Model, ModelConfig},
@@ -66,6 +65,7 @@ pub struct TrainingConfig {
     pub num_workers: usize,
     pub seed: u64,
     pub learning_rate: f64,
+    pub class_indices: Vec<usize>,
 }
 
 impl TrainingConfig {
@@ -76,6 +76,7 @@ impl TrainingConfig {
         num_workers: usize,
         seed: u64,
         learning_rate: f64,
+        class_indices: Vec<usize>,
     ) -> Self {
         Self {
             model,
@@ -85,6 +86,7 @@ impl TrainingConfig {
             num_workers,
             seed,
             learning_rate,
+            class_indices,
         }
     }
 }
@@ -93,16 +95,6 @@ fn create_artifact_dir(artifact_dir: &str) {
     // Remove existing artifacts before to get an accurate learner summary
     std::fs::remove_dir_all(artifact_dir).ok();
     std::fs::create_dir_all(artifact_dir).ok();
-}
-
-pub fn train<B: AutodiffBackend>(
-    artifact_dir: &str,
-    train_dataset: &SpectraData,
-    validation_dataset: &SpectraData,
-    config: TrainingConfig,
-    device: B::Device,
-) {
-
 }
 
 pub fn train_holdout<B, H>(
@@ -114,14 +106,16 @@ pub fn train_holdout<B, H>(
     B: AutodiffBackend,
     H: Holdout,
 {
-
-        create_artifact_dir(artifact_dir);
+    create_artifact_dir(artifact_dir);
     config
         .save(format!("{artifact_dir}/config.json"))
         .expect("Config should be saved successfully");
     B::seed(&device, config.seed);
 
-    let batcher = SpectraScribeBatcher::new(holdout.class_indices().to_vec());
+    let batcher = SpectraScribeBatcher::new(
+        holdout.class_indices().to_vec(),
+        holdout.train_dataset().bin_size(),
+    );
 
     let dataloader_train = DataLoaderBuilder::new(batcher.clone())
         .batch_size(config.batch_size)
@@ -158,5 +152,4 @@ pub fn train_holdout<B, H>(
         .model
         .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())
         .expect("Trained model should be saved successfully");
-
 }

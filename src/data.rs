@@ -1,16 +1,23 @@
 use burn::{data::dataloader::batcher::Batcher, prelude::*};
 use molecular_formulas::prelude::*;
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct SpectraScribeBatcher {
     class_indices: Vec<usize>,
+    bin_size: usize,
 }
 
 impl SpectraScribeBatcher {
-    pub fn new(class_indices: Vec<usize>) -> Self {
-        Self { class_indices }
+    pub fn new(class_indices: Vec<usize>, bin_size: usize) -> Self {
+        Self {
+            class_indices,
+            bin_size,
+        }
     }
     pub fn num_classes(&self) -> usize {
         self.class_indices.len()
+    }
+    pub fn bin_size(&self) -> usize {
+        self.bin_size
     }
 }
 
@@ -142,11 +149,10 @@ pub const ELEMENTS: &[Element; 118] = &[
 ];
 
 pub const ELEMENT_COUNT: usize = ELEMENTS.len();
-pub const BIN_SIZE: usize = 1000; // need to figure out what is optimal value
 
 #[derive(Clone, Debug)]
 pub struct SpectrumSample {
-    pub(crate) spectra: [f64; BIN_SIZE],
+    pub(crate) spectra: Vec<f64>,
     pub(crate) element_present: [bool; ELEMENT_COUNT],
 }
 
@@ -158,16 +164,23 @@ impl<B: Backend> Batcher<B, SpectrumSample, SpectraScribeBatch<B>> for SpectraSc
     ) -> SpectraScribeBatch<B> {
         let spectra = items
             .iter()
-            .map(|item| TensorData::from(item.spectra).convert::<B::FloatElem>())
+            .map(|item| TensorData::from(item.spectra.as_slice()).convert::<B::FloatElem>())
             .map(|data| Tensor::<B, 1>::from_data(data, device))
-            .map(|tensor| tensor.reshape([1, BIN_SIZE]))
+            .map(|tensor| tensor.reshape([1, self.bin_size()]))
             .collect();
-        let targets = items.iter().map(|item| {
-            let selected_targets = self.class_indices.iter().map(|&class_index| item.element_present[class_index]).collect::<Vec<_>>();
-            Tensor::<B,1, Bool>::from_data(selected_targets.as_slice(), device)
-                .reshape([1, self.num_classes()])
-                .int()
-        }).collect();
+        let targets = items
+            .iter()
+            .map(|item| {
+                let selected_targets = self
+                    .class_indices
+                    .iter()
+                    .map(|&class_index| item.element_present[class_index])
+                    .collect::<Vec<_>>();
+                Tensor::<B, 1, Bool>::from_data(selected_targets.as_slice(), device)
+                    .reshape([1, self.num_classes()])
+                    .int()
+            })
+            .collect();
         let spectra = Tensor::cat(spectra, 0);
         let targets = Tensor::cat(targets, 0);
         SpectraScribeBatch { spectra, targets }

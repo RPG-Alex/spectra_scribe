@@ -1,12 +1,11 @@
 use mascot_rs::mascot_generic_format::MGFVec;
 use mass_spectrometry::traits::Spectrum;
 use molecular_formulas::{ChemicalFormula, MolecularFormula};
-use rand::{prelude::*, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use burn::data::dataset::Dataset;
 
 use crate::{
-    data::{BIN_SIZE, ELEMENT_COUNT, ELEMENTS, SpectrumSample},
+    data::{ELEMENT_COUNT, ELEMENTS, SpectrumSample},
     error::SpectraError,
 };
 
@@ -14,48 +13,32 @@ use crate::{
 pub struct SpectraData {
     pub(crate) dataset: Vec<SpectrumSample>,
     pub(crate) class_weights: Vec<f32>,
+    pub(crate) bin_size: usize,
 }
 
 impl SpectraData {
-    pub fn train(&self, seed: u64) -> Self {
-        let mut data = self.dataset.clone();
-        let mut rng = ChaCha8Rng::seed_from_u64(seed);
-
-        data.shuffle(&mut rng);
-        let len = data.len();
-        let Some(subset) = data.get(0..(len * 8 / 10)) else {
-            unreachable!("Problem loading vec")
-        };
-        Self {
-            dataset: subset.to_vec(),
-            class_weights: self.class_weights.clone(),
-        }
-    }
-
-    pub fn new() -> Result<Self, SpectraError> {
-        let data = load_spectra()?;
+    pub fn new(bin_size: usize) -> Result<Self, SpectraError> {
+        let data = load_spectra(bin_size)?;
         let weights = get_class_weights(&data);
         Ok(Self {
             dataset: data,
             class_weights: weights,
+            bin_size,
         })
     }
-    pub fn test(&self, seed: u64) -> Self {
-        let mut data = self.dataset.clone();
-        let mut rng = ChaCha8Rng::seed_from_u64(seed);
-        data.shuffle(&mut rng);
-        let len = data.len();
-        let Some(subset) = data.get((len * 8 / 10)..len) else {
-            unreachable!("Vec subsetting failed")
-        };
 
-        Self {
-            dataset: subset.to_vec(),
-            class_weights: self.class_weights.clone(),
-        }
+    pub fn class_weights_for(&self, class_indices: &[usize]) -> Vec<f32> {
+        class_indices
+            .iter()
+            .map(|&index| self.class_weights[index])
+            .collect()
+    }
+    pub fn bin_size(&self) -> usize {
+        self.bin_size
     }
 }
-fn load_spectra() -> Result<Vec<SpectrumSample>, SpectraError> {
+
+fn load_spectra(bin_size: usize) -> Result<Vec<SpectrumSample>, SpectraError> {
     let load = pollster::block_on(
         MGFVec::<f64>::annotated_ms2()
             .target_directory("data")
@@ -66,11 +49,11 @@ fn load_spectra() -> Result<Vec<SpectrumSample>, SpectraError> {
         let Some(formula) = spec.metadata().formula() else {
             continue;
         };
+        let spectra = spec
+            .linear_binned_intensities(0.0, 1000.0, bin_size)?
+            .to_vec();
         output.push(SpectrumSample {
-            spectra: *spec
-                .linear_binned_intensities(0.0, 1000.0, BIN_SIZE)?
-                .as_array::<BIN_SIZE>()
-                .ok_or(SpectraError::InvalidArray)?,
+            spectra,
             element_present: *spec_occurrence(formula)
                 .as_array::<ELEMENT_COUNT>()
                 .ok_or(SpectraError::InvalidArray)?,

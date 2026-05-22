@@ -8,7 +8,6 @@ use csv::Writer;
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use crate::{
-    data::{ELEMENT_COUNT, ELEMENTS},
     dataset::SpectraData,
     error::SpectraError,
     experiment_config::ExperimentConfig,
@@ -23,6 +22,12 @@ pub struct Experiment1Config {
     pub number_of_holdouts: usize,
     pub random_seed: u64,
     pub training_size: f32,
+    pub epochs: usize,
+    pub batch_size: usize,
+    pub workers: usize,
+    pub learning_rate: f64,
+    pub hidden_size: usize,
+    pub bin_size: usize,
 }
 
 impl Default for Experiment1Config {
@@ -31,6 +36,12 @@ impl Default for Experiment1Config {
             number_of_holdouts: 1,
             random_seed: 42,
             training_size: 0.8,
+            epochs: 10,
+            batch_size: 64,
+            workers: 4,
+            learning_rate: 1.0e-4,
+            hidden_size: 100,
+            bin_size: 1000,
         }
     }
 }
@@ -49,14 +60,11 @@ impl ExperimentConfig for Experiment1Config {
     fn training_size(&self) -> f32 {
         self.training_size
     }
-
+    fn bin_size(&self) -> usize {
+        self.bin_size
+    }
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType> {
         let class_indices = observed_class_indices(&dataset.dataset);
-
-        let classes = class_indices
-            .iter()
-            .map(|&index| ELEMENTS[index])
-            .collect::<Vec<_>>();
 
         let mut holdouts = Vec::with_capacity(self.number_of_holdouts());
 
@@ -72,17 +80,18 @@ impl ExperimentConfig for Experiment1Config {
             let train = SpectraData {
                 dataset: samples[..split_index].to_vec(),
                 class_weights: dataset.class_weights.clone(),
+                bin_size: dataset.bin_size(),
             };
 
             let validation = SpectraData {
                 dataset: samples[split_index..].to_vec(),
                 class_weights: dataset.class_weights.clone(),
+                bin_size: dataset.bin_size(),
             };
 
             let holdout = BasicHoldout::new(
                 train,
                 validation,
-                classes.clone(),
                 class_indices.clone(),
                 holdout_number,
                 holdout_seed as usize,
@@ -93,17 +102,31 @@ impl ExperimentConfig for Experiment1Config {
 
         holdouts
     }
+
+    fn epochs(&self) -> usize {
+        self.epochs
+    }
+
+    fn batch_size(&self) -> usize {
+        self.batch_size
+    }
+
+    fn num_workers(&self) -> usize {
+        self.workers
+    }
+
+    fn learning_rate(&self) -> f64 {
+        self.learning_rate
+    }
+
+    fn hidden_size(&self) -> usize {
+        self.hidden_size
+    }
 }
 
 pub fn run() -> Result<(), SpectraError> {
     type MyBackend = Wgpu<f32, i32>;
     type MyAutodiffBackend = Autodiff<MyBackend>;
-
-    // Training values
-    let epochs: usize = 10;
-    let batch_size: usize = 64;
-    let workers: usize = 4;
-    let learning_rate: f64 = 1.0e-4;
 
     let experiment_config = Experiment1Config::default();
 
@@ -116,7 +139,7 @@ pub fn run() -> Result<(), SpectraError> {
     fs::create_dir_all(results_dir)?;
 
     println!("Loading spectra.");
-    let dataset = SpectraData::new()?;
+    let dataset = SpectraData::new(experiment_config.bin_size())?;
     println!("Finished loading spectra.");
 
     let holdouts = experiment_config.generate_holdouts(&dataset);
@@ -124,6 +147,10 @@ pub fn run() -> Result<(), SpectraError> {
     println!("Generated {} holdout(s).", holdouts.len());
 
     for holdout in holdouts {
+    debug_assert_eq!(
+        holdout.num_classes(),
+        holdout.class_indices().len(),
+    );
         println!(
             "Running holdout {} with seed {}.",
             holdout.holdout_number(),
@@ -138,16 +165,25 @@ pub fn run() -> Result<(), SpectraError> {
 
         let artifact_dir = format!("{experiment_dir}/holdout_{}", holdout.holdout_number(),);
 
-        let model_config = ModelConfig::new(ELEMENT_COUNT, 100)
-            .with_class_weights(Some(holdout.train_dataset().class_weights.clone()));
+        let class_weights = holdout
+            .train_dataset()
+            .class_weights_for(holdout.class_indices());
+
+        let model_config = ModelConfig::new(
+            holdout.num_classes(),
+            experiment_config.hidden_size(),
+            experiment_config.bin_size(),
+        )
+        .with_class_weights(Some(class_weights));
 
         let training_config = TrainingConfig::new_with_values(
             model_config,
-            epochs,
-            batch_size,
-            workers,
+            experiment_config.epochs(),
+            experiment_config.batch_size(),
+            experiment_config.num_workers(),
             holdout.random_seed() as u64,
-            learning_rate,
+            experiment_config.learning_rate(),
+            holdout.class_indices().to_vec(),
         );
 
         crate::training::train_holdout::<MyAutodiffBackend, _>(
@@ -162,7 +198,12 @@ pub fn run() -> Result<(), SpectraError> {
         let predictions =
             crate::inference::infer::<MyBackend>(&artifact_dir, &device, validation_items.clone());
 
-        let confusion_matrices = create_confusion_matrices(predictions, &validation_items, 0.5)?;
+        let confusion_matrices = create_confusion_matrices(
+            predictions,
+            &validation_items,
+            holdout.class_indices(),
+            experiment_config.threshold(),
+        )?;
 
         let results_path = PathBuf::from(results_dir).join(format!(
             "experiment1_holdout_{}_results.csv",

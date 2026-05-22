@@ -1,14 +1,11 @@
-use elements_rs::Element;
-
 use super::Holdout;
 
-use crate::{data::SpectrumSample, dataset::SpectraData};
+use crate::dataset::SpectraData;
 
 #[derive(Clone, Debug)]
 pub struct BasicHoldout {
     train: SpectraData,
     validation: SpectraData,
-    classes: Vec<Element>,
     class_indices: Vec<usize>,
     holdout_number: usize,
     random_seed: usize,
@@ -18,7 +15,6 @@ impl BasicHoldout {
     pub fn new(
         train: SpectraData,
         validation: SpectraData,
-        classes: Vec<Element>,
         class_indices: Vec<usize>,
         holdout_number: usize,
         random_seed: usize,
@@ -26,7 +22,6 @@ impl BasicHoldout {
         Self {
             train,
             validation,
-            classes,
             class_indices,
             holdout_number,
             random_seed,
@@ -43,10 +38,6 @@ impl BasicHoldout {
 }
 
 impl Holdout for BasicHoldout {
-    fn classes(&self) -> &[Element] {
-        &self.classes
-    }
-
     fn class_indices(&self) -> &[usize] {
         &self.class_indices
     }

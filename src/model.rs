@@ -3,8 +3,6 @@ use burn::{
     prelude::*,
 };
 
-use crate::data::BIN_SIZE;
-
 #[derive(Module, Debug)]
 pub struct Model<B: Backend> {
     linear1: Linear<B>,
@@ -22,6 +20,7 @@ pub struct Model<B: Backend> {
 pub struct ModelConfig {
     num_classes: usize,
     hidden_size: usize,
+    bin_size: usize,
     #[config(default = "0.5")]
     dropout: f64,
     class_weights: Option<Vec<f32>>,
@@ -34,7 +33,7 @@ impl ModelConfig {
         class_weights: Option<Vec<f32>>,
     ) -> Model<B> {
         Model {
-            linear1: LinearConfig::new(BIN_SIZE, self.hidden_size).init(device),
+            linear1: LinearConfig::new(self.bin_size, self.hidden_size).init(device),
             batch_norm1: BatchNormConfig::new(self.hidden_size).init(device),
             linear2: LinearConfig::new(self.hidden_size, self.hidden_size / 2).init(device),
             batch_norm2: BatchNormConfig::new(self.hidden_size / 2).init(device),
@@ -48,6 +47,10 @@ impl ModelConfig {
 
     pub fn class_weights(&self) -> Option<Vec<f32>> {
         self.class_weights.clone()
+    }
+
+    pub fn bin_size(&self) -> usize {
+        self.bin_size
     }
 }
 
