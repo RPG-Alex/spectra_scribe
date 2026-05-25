@@ -28,6 +28,7 @@ pub struct Experiment1Config {
     pub learning_rate: f64,
     pub hidden_size: usize,
     pub bin_size: usize,
+    pub weight_range: (f32, f32),
 }
 
 impl Default for Experiment1Config {
@@ -42,6 +43,7 @@ impl Default for Experiment1Config {
             learning_rate: 1.0e-4,
             hidden_size: 100,
             bin_size: 1000,
+            weight_range: (0.1,10.0),
         }
     }
 }
@@ -79,13 +81,11 @@ impl ExperimentConfig for Experiment1Config {
 
             let train = SpectraData {
                 dataset: samples[..split_index].to_vec(),
-                class_weights: dataset.class_weights.clone(),
                 bin_size: dataset.bin_size(),
             };
 
             let validation = SpectraData {
                 dataset: samples[split_index..].to_vec(),
-                class_weights: dataset.class_weights.clone(),
                 bin_size: dataset.bin_size(),
             };
 
@@ -121,6 +121,10 @@ impl ExperimentConfig for Experiment1Config {
 
     fn hidden_size(&self) -> usize {
         self.hidden_size
+    }
+    
+    fn weight_range(&self) -> (f32, f32) {
+        self.weight_range
     }
 }
 
@@ -167,8 +171,7 @@ pub fn run() -> Result<(), SpectraError> {
 
         let class_weights = holdout
             .train_dataset()
-            .class_weights_for(holdout.class_indices());
-
+            .class_weights_for(holdout.class_indices(), experiment_config.weight_range());
         let model_config = ModelConfig::new(
             holdout.num_classes(),
             experiment_config.hidden_size(),

@@ -25,7 +25,7 @@ pub fn infer<B: Backend>(
 
     let model = config
         .model
-        .init::<B>(device, config.model.class_weights())
+        .init::<B>(device)
         .load_record(record);
 
     let batcher = SpectraScribeBatcher::new(config.class_indices.clone(), config.model.bin_size());

@@ -30,7 +30,6 @@ impl ModelConfig {
     pub fn init<B: Backend>(
         &self,
         device: &B::Device,
-        class_weights: Option<Vec<f32>>,
     ) -> Model<B> {
         Model {
             linear1: LinearConfig::new(self.bin_size, self.hidden_size).init(device),
@@ -41,7 +40,7 @@ impl ModelConfig {
             dropout: DropoutConfig::new(self.dropout).init(),
             activation: Sigmoid::new(),
             inner_activation: Relu::new(),
-            class_weights,
+            class_weights: self.class_weights.clone(),
         }
     }
 

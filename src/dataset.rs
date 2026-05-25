@@ -12,25 +12,30 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct SpectraData {
     pub(crate) dataset: Vec<SpectrumSample>,
-    pub(crate) class_weights: Vec<f32>,
     pub(crate) bin_size: usize,
 }
 
 impl SpectraData {
     pub fn new(bin_size: usize) -> Result<Self, SpectraError> {
         let data = load_spectra(bin_size)?;
-        let weights = get_class_weights(&data);
         Ok(Self {
             dataset: data,
-            class_weights: weights,
             bin_size,
         })
     }
 
-    pub fn class_weights_for(&self, class_indices: &[usize]) -> Vec<f32> {
+    pub fn class_weights_for(&self, class_indices: &[usize], weight_range: (f32, f32)) -> Vec<f32> {
+        let (min_weight, max_weight) = weight_range;
+        let n_samples = self.dataset.len() as f32;
+        let n_classes = class_indices.len() as f32;
         class_indices
             .iter()
-            .map(|&index| self.class_weights[index])
+            .map(|&class_index| {
+                let positive_count = self.dataset.iter().filter(|sample| sample.element_present[class_index]).count() as f32;
+                let positive_count = positive_count.max(1.0);
+                let weight = n_samples / (positive_count * n_classes);
+                weight.clamp(min_weight, max_weight)
+            })
             .collect()
     }
     pub fn bin_size(&self) -> usize {
@@ -72,25 +77,6 @@ fn spec_occurrence(formula: &ChemicalFormula<u32, i32>) -> [bool; ELEMENT_COUNT]
     elements_occurrence
 }
 
-fn get_class_weights(data: &[SpectrumSample]) -> Vec<f32> {
-    let mut output: Vec<f32> = vec![0.0; ELEMENT_COUNT];
-    let n_samples = data.len() as f32;
-    let n_classes = ELEMENT_COUNT as f32;
-    for d in data {
-        for (i, &element_present) in d.element_present.iter().enumerate() {
-            if element_present {
-                output[i] += 1.0;
-            }
-        }
-    }
-    for weight in &mut output {
-        if *weight == 0.0 {
-            *weight = 1e-3;
-        }
-        *weight = n_samples / (*weight * n_classes);
-    }
-    output
-}
 
 impl Dataset<SpectrumSample> for SpectraData {
     fn get(&self, index: usize) -> Option<SpectrumSample> {

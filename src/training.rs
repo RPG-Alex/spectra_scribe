@@ -141,7 +141,7 @@ pub fn train_holdout<B, H>(
 
     let model = config
         .model
-        .init::<B>(&device, Some(holdout.train_dataset().class_weights.clone()));
+        .init::<B>(&device);
     let result = training.launch(Learner::new(
         model,
         config.optimizer.init(),

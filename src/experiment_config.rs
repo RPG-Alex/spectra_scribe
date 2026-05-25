@@ -17,6 +17,9 @@ pub trait ExperimentConfig {
         1.0 - self.training_size()
     }
 
+    /// Minimum and maximum bounds applied to class weights after frequency weighting.
+    fn weight_range(&self) -> (f32, f32);
+
     /// Number of full passes the model makes over the training data.
     fn epochs(&self) -> usize;
 
