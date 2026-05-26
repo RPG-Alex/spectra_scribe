@@ -1,5 +1,9 @@
 use crate::{dataset::SpectraData, holdout::Holdout};
 pub mod standard;
+pub mod runner;
+
+pub use runner::run_experiment;
+pub use standard::StandardConfig;
 
 /// Defines the methods for setting up an experiment
 pub trait ExperimentConfig {
@@ -49,4 +53,5 @@ pub trait ExperimentConfig {
 
     /// Defines the number of the current experiment
     fn experiment_num(&self) -> usize;
+
 }
