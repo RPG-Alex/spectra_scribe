@@ -1,4 +1,4 @@
-use burn::{data::dataloader::batcher::Batcher, prelude::*};
+use burn::{data::dataloader::batcher::Batcher, prelude::*, tensor::{backend::BackendTypes, ops::IntTensor}};
 use molecular_formulas::prelude::*;
 #[derive(Clone)]
 pub struct SpectraScribeBatcher {
@@ -160,7 +160,7 @@ impl<B: Backend> Batcher<B, SpectrumSample, SpectraScribeBatch<B>> for SpectraSc
     fn batch(
         &self,
         items: Vec<SpectrumSample>,
-        device: &<B as Backend>::Device,
+        device: &<B as BackendTypes>::Device,
     ) -> SpectraScribeBatch<B> {
         let spectra = items
             .iter()
