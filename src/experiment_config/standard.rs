@@ -113,6 +113,31 @@ impl ExperimentConfig for StandardConfig {
     fn dropout(&self) -> f64 {
         self.dropout
     }
+    fn experiment_details(&self) -> String {
+        let mut out: String = String::new();
+        out.push_str(&format!("Experiment Number: {}\n", self.experiment_num));
+        out.push_str(&format!(
+            "Number of Holdouts: {}\n",
+            self.number_of_holdouts
+        ));
+        out.push_str(&format!("Random seed: {}\n", self.random_seed));
+        out.push_str(&format!("Training Size: {}\n", self.training_size));
+        out.push_str(&format!("Number of Epochs: {}\n", self.epochs));
+        out.push_str(&format!("Batch Size: {}\n", self.batch_size));
+        out.push_str(&format!("Number of Workers: {}\n", self.workers));
+        out.push_str(&format!("Learning Rate: {}\n", self.learning_rate));
+        out.push_str(&format!("Hidden Layer Size: {}\n", self.hidden_size));
+        out.push_str(&format!("Bin Size: {}\n", self.bin_size));
+        match self.weight_range {
+            Some((min, max)) => {
+                out.push_str(&format!("Weight Range: {}-{}\n", min, max));
+            }
+            None => out.push_str("No weights used\n"),
+        };
+        out.push_str(&format!("Dropout: {}\n", self.dropout));
+
+        out
+    }
 }
 
 impl Default for StandardConfig {

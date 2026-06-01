@@ -1,4 +1,4 @@
-use burn::{data::dataloader::batcher::Batcher, prelude::*, tensor::{backend::BackendTypes, ops::IntTensor}};
+use burn::{data::dataloader::batcher::Batcher, prelude::*, tensor::backend::BackendTypes};
 use molecular_formulas::prelude::*;
 #[derive(Clone)]
 pub struct SpectraScribeBatcher {

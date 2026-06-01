@@ -55,7 +55,6 @@ impl<B: Backend> Model<B> {
         let x = self.batch_norm1.forward(x);
         let x = self.inner_activation.forward(x);
         let x = self.dropout.forward(x);
-
         let x = self.linear2.forward(x);
         let x = self.batch_norm2.forward(x);
         let x = self.inner_activation.forward(x);

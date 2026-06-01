@@ -55,4 +55,7 @@ pub trait ExperimentConfig {
 
     /// The current experiment's dropout number
     fn dropout(&self) -> f64;
+
+    /// Experiment details
+    fn experiment_details(&self) -> String;
 }

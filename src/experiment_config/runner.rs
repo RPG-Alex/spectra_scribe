@@ -31,6 +31,7 @@ where
     fs::create_dir_all(&experiment_dir)?;
     fs::create_dir_all(results_dir)?;
 
+    println!("{}", experiment_config.experiment_details());
     println!("Loading spectra.");
     let dataset = SpectraData::new(experiment_config.bin_size())?;
     println!("Finished loading spectra.");
