@@ -1,7 +1,7 @@
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use crate::{
-    dataset::SpectraData, experiment_config::ExperimentConfig, experiments::observed_class_indices,
+    dataset::SpectraData, experiment_config::ExperimentProtocol, experiments::observed_class_indices,
     holdout::BasicHoldout,
 };
 
@@ -20,7 +20,7 @@ pub struct StandardConfig {
     pub dropout: f64,
 }
 
-impl ExperimentConfig for StandardConfig {
+impl ExperimentProtocol for StandardConfig {
     type HoldoutType = BasicHoldout;
 
     fn number_of_holdouts(&self) -> usize {
@@ -33,9 +33,6 @@ impl ExperimentConfig for StandardConfig {
 
     fn training_size(&self) -> f32 {
         self.training_size
-    }
-    fn bin_size(&self) -> usize {
-        self.bin_size
     }
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType> {
         let class_indices = observed_class_indices(&dataset.dataset);
@@ -75,69 +72,10 @@ impl ExperimentConfig for StandardConfig {
         holdouts
     }
 
-    fn epochs(&self) -> usize {
-        self.epochs
-    }
-
-    fn batch_size(&self) -> usize {
-        self.batch_size
-    }
-
-    fn num_workers(&self) -> usize {
-        self.workers
-    }
-
-    fn learning_rate(&self) -> f64 {
-        self.learning_rate
-    }
-
-    fn hidden_size(&self) -> usize {
-        self.hidden_size
-    }
-
-    fn weight_range(&self) -> Option<(f32, f32)> {
-        self.weight_range
-    }
-
     fn validation_size(&self) -> f32 {
         1.0 - self.training_size()
     }
 
-    fn threshold(&self) -> f64 {
-        0.5
-    }
-    fn experiment_num(&self) -> usize {
-        self.experiment_num
-    }
-
-    fn dropout(&self) -> f64 {
-        self.dropout
-    }
-    fn experiment_details(&self) -> String {
-        let mut out: String = String::new();
-        out.push_str(&format!("Experiment Number: {}\n", self.experiment_num));
-        out.push_str(&format!(
-            "Number of Holdouts: {}\n",
-            self.number_of_holdouts
-        ));
-        out.push_str(&format!("Random seed: {}\n", self.random_seed));
-        out.push_str(&format!("Training Size: {}\n", self.training_size));
-        out.push_str(&format!("Number of Epochs: {}\n", self.epochs));
-        out.push_str(&format!("Batch Size: {}\n", self.batch_size));
-        out.push_str(&format!("Number of Workers: {}\n", self.workers));
-        out.push_str(&format!("Learning Rate: {}\n", self.learning_rate));
-        out.push_str(&format!("Hidden Layer Size: {}\n", self.hidden_size));
-        out.push_str(&format!("Bin Size: {}\n", self.bin_size));
-        match self.weight_range {
-            Some((min, max)) => {
-                out.push_str(&format!("Weight Range: {}-{}\n", min, max));
-            }
-            None => out.push_str("No weights used\n"),
-        };
-        out.push_str(&format!("Dropout: {}\n", self.dropout));
-
-        out
-    }
 }
 
 impl Default for StandardConfig {

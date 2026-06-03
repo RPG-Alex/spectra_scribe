@@ -7,44 +7,36 @@ use burn::backend::{Autodiff, Wgpu};
 use csv::Writer;
 
 use crate::{
-    dataset::SpectraData, error::SpectraError, experiment_config::ExperimentConfig,
+    dataset::SpectraData, error::SpectraError, experiment_config::{ExperimentProtocol, experiment_run::ExperimentRunConfig},
     holdout::Holdout, inference::create_confusion_matrices, model::ModelConfig,
     training::TrainingConfig,
 };
 
-pub fn run_experiment<C>(experiment_config: C) -> Result<(), SpectraError>
+pub fn run_experiment<P>(config: ExperimentRunConfig<P>) -> Result<(), SpectraError>
 where
-    C: ExperimentConfig,
+    P: ExperimentProtocol,
 {
+    
     type MyBackend = Wgpu<f32, i32>;
     type MyAutodiffBackend = Autodiff<MyBackend>;
+
+    println!("Loading spectra.");
+    let dataset = SpectraData::new(config.features.bin_size)?;
+    println!("Finished loading spectra.");
+
+    let holdouts = config.protocol.generate_holdouts(&dataset);
 
     let device = burn::backend::wgpu::WgpuDevice::default();
 
     let experiment_dir = format!(
         "./experiments/experiment{}",
-        experiment_config.experiment_num()
+        config.run.experiment_num
     );
 
     let results_dir = "./results";
 
     fs::create_dir_all(&experiment_dir)?;
     fs::create_dir_all(results_dir)?;
-
-    println!("{}", experiment_config.experiment_details());
-    println!("Loading spectra.");
-    let dataset = SpectraData::new(experiment_config.bin_size())?;
-    println!("Finished loading spectra.");
-
-    println!(
-        "Using {:.0}% training / {:.0}% validation split.",
-        experiment_config.training_size() * 100.0,
-        experiment_config.validation_size() * 100.0,
-    );
-
-    let holdouts = experiment_config.generate_holdouts(&dataset);
-
-    println!("Generated {} holdout(s).", holdouts.len());
 
     for holdout in holdouts {
         debug_assert_eq!(holdout.num_classes(), holdout.class_indices().len());
@@ -62,7 +54,7 @@ where
         );
 
         let artifact_dir = format!("{experiment_dir}/holdout_{}", holdout.holdout_number(),);
-        let class_weights: Option<Vec<f32>> = experiment_config.weight_range().map(|weights| {
+        let class_weights: Option<Vec<f32>> = config.loss.weight_range.map(|weights| {
             holdout
                 .train_dataset()
                 .class_weights_for(holdout.class_indices(), weights)
@@ -70,19 +62,19 @@ where
 
         let model_config = ModelConfig::new(
             holdout.num_classes(),
-            experiment_config.hidden_size(),
-            experiment_config.bin_size(),
-            experiment_config.dropout(),
+            config.model.hidden_size,
+            config.features.bin_size,
+            config.model.dropout,
         )
         .with_class_weights(class_weights);
 
         let training_config = TrainingConfig::new_with_values(
             model_config,
-            experiment_config.epochs(),
-            experiment_config.batch_size(),
-            experiment_config.num_workers(),
+            config.optimizer.epochs,
+            config.optimizer.batch_size,
+            config.optimizer.workers,
             holdout.random_seed() as u64,
-            experiment_config.learning_rate(),
+            config.optimizer.learning_rate,
             holdout.class_indices().to_vec(),
         );
 
@@ -102,12 +94,12 @@ where
             predictions,
             &validation_items,
             holdout.class_indices(),
-            experiment_config.threshold(),
+            config.evaluation.threshold,
         )?;
 
         let results_path = PathBuf::from(results_dir).join(format!(
             "experiment{}_holdout_{}_results.csv",
-            experiment_config.experiment_num(),
+            config.run.experiment_num,
             holdout.holdout_number(),
         ));
 
