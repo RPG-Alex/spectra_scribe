@@ -1,38 +1,33 @@
 use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use crate::{
-    dataset::SpectraData, experiment_config::ExperimentProtocol, experiments::observed_class_indices,
-    holdout::BasicHoldout,
+    dataset::SpectraData, experiment_protocol::{ExperimentProtocol, evaluation::EvaluationConfig, feature::FeatureConfig, loss::LossConfig, mlp_model::MlpModelConfig, protocol_config::ProtocolConfig, run::RunConfig},
+    experiments::observed_class_indices, holdout::BasicHoldout, training::TrainingConfig,
 };
 
-pub struct StandardConfig {
-    pub number_of_holdouts: usize,
-    pub random_seed: u64,
-    pub training_size: f32,
-    pub epochs: usize,
-    pub batch_size: usize,
-    pub workers: usize,
-    pub learning_rate: f64,
-    pub hidden_size: usize,
-    pub bin_size: usize,
-    pub weight_range: Option<(f32, f32)>,
-    pub experiment_num: usize,
-    pub dropout: f64,
+pub struct StandardExperiment {
+    pub run: RunConfig,
+    pub features: FeatureConfig,
+    pub protocol: ProtocolConfig,
+    pub model: MlpModelConfig,
+    pub training: TrainingConfig,
+    pub loss: LossConfig,
+    pub evaluation: EvaluationConfig,
 }
 
-impl ExperimentProtocol for StandardConfig {
+impl ExperimentProtocol for StandardExperiment {
     type HoldoutType = BasicHoldout;
 
     fn number_of_holdouts(&self) -> usize {
-        self.number_of_holdouts
+        self.protocol.number_of_holdouts
     }
 
     fn random_seed(&self) -> u64 {
-        self.random_seed
+        self.protocol.random_seed
     }
 
     fn training_size(&self) -> f32 {
-        self.training_size
+        self.protocol.training_size
     }
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType> {
         let class_indices = observed_class_indices(&dataset.dataset);
@@ -74,25 +69,5 @@ impl ExperimentProtocol for StandardConfig {
 
     fn validation_size(&self) -> f32 {
         1.0 - self.training_size()
-    }
-
-}
-
-impl Default for StandardConfig {
-    fn default() -> Self {
-        Self {
-            number_of_holdouts: 1,
-            random_seed: 42,
-            training_size: 0.8,
-            epochs: 10,
-            batch_size: 256,
-            workers: 4,
-            learning_rate: 1.0e-4,
-            hidden_size: 100,
-            bin_size: 1000,
-            weight_range: Some((0.1, 10.0)),
-            experiment_num: 1,
-            dropout: 0.5,
-        }
     }
 }

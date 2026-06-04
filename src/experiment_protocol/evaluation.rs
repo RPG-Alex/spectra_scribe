@@ -1,3 +1,3 @@
 pub struct EvaluationConfig {
-    pub threshold: f64
+    pub threshold: f64,
 }

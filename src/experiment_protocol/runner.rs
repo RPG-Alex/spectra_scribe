@@ -7,8 +7,12 @@ use burn::backend::{Autodiff, Wgpu};
 use csv::Writer;
 
 use crate::{
-    dataset::SpectraData, error::SpectraError, experiment_config::{ExperimentProtocol, experiment_run::ExperimentRunConfig},
-    holdout::Holdout, inference::create_confusion_matrices, model::ModelConfig,
+    dataset::SpectraData,
+    error::SpectraError,
+    experiment_protocol::{ExperimentProtocol, experiment_run::ExperimentRunConfig},
+    holdout::Holdout,
+    inference::create_confusion_matrices,
+    model::ModelConfig,
     training::TrainingConfig,
 };
 
@@ -16,7 +20,6 @@ pub fn run_experiment<P>(config: ExperimentRunConfig<P>) -> Result<(), SpectraEr
 where
     P: ExperimentProtocol,
 {
-    
     type MyBackend = Wgpu<f32, i32>;
     type MyAutodiffBackend = Autodiff<MyBackend>;
 
@@ -28,10 +31,7 @@ where
 
     let device = burn::backend::wgpu::WgpuDevice::default();
 
-    let experiment_dir = format!(
-        "./experiments/experiment{}",
-        config.run.experiment_num
-    );
+    let experiment_dir = format!("./experiments/experiment{}", config.run.experiment_num);
 
     let results_dir = "./results";
 

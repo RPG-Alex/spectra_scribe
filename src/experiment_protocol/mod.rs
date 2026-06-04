@@ -1,6 +1,5 @@
 use crate::{dataset::SpectraData, holdout::Holdout};
-pub mod runner;
-pub mod standard;
+pub mod class_distribution;
 pub mod evaluation;
 pub mod experiment_definition;
 pub mod experiment_run;
@@ -9,6 +8,10 @@ pub mod loss;
 pub mod mlp_model;
 pub mod optimizer;
 pub mod run;
+pub mod runner;
+pub mod protocol_config;
+pub mod split_strategy;
+pub mod standard;
 
 pub use runner::run_experiment;
 

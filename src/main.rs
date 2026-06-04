@@ -1,14 +1,11 @@
 #![recursion_limit = "256"]
 
-use crate::{
-    error::SpectraError,
-    experiments::{experiment1},
-};
+use crate::{error::SpectraError, experiments::experiment1};
 
 mod data;
 mod dataset;
 mod error;
-mod experiment_config;
+mod experiment_protocol;
 mod experiments;
 mod holdout;
 mod inference;

@@ -36,3 +36,22 @@ pub trait Holdout {
         self.split().1.len()
     }
 }
+
+pub trait HoldoutGenerator {
+    type HoldoutType: Holdout;
+
+    fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType>;
+}
+
+pub struct RandomHoldoutConfig {
+    pub number_of_holdouts: usize,
+    pub random_seed: u64,
+    pub training_size: f32,
+}
+
+pub struct StratifiedHoldoutConfig {
+    pub number_of_holdouts: usize,
+    pub random_seed: u64,
+    pub training_size: f32,
+    pub mini_validation_positives_per_class: usize
+}

@@ -1,4 +1,7 @@
-use crate::experiment_config::{evaluation::EvaluationConfig, feature::FeatureConfig, loss::LossConfig, mlp_model::MlpModelConfig, optimizer::OptimizerConfig, run::RunConfig};
+use crate::experiment_protocol::{
+    evaluation::EvaluationConfig, feature::FeatureConfig, loss::LossConfig,
+    mlp_model::MlpModelConfig, optimizer::OptimizerConfig, run::RunConfig,
+};
 
 pub struct ExperimentRunConfig<P> {
     pub run: RunConfig,
