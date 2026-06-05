@@ -1,5 +1,6 @@
 use burn::{data::dataloader::batcher::Batcher, prelude::*, tensor::backend::BackendTypes};
 use molecular_formulas::prelude::*;
+
 #[derive(Clone)]
 pub struct SpectraScribeBatcher {
     class_indices: Vec<usize>,
@@ -7,16 +8,16 @@ pub struct SpectraScribeBatcher {
 }
 
 impl SpectraScribeBatcher {
-    pub fn new(class_indices: Vec<usize>, bin_size: usize) -> Self {
+    pub const fn new(class_indices: Vec<usize>, bin_size: usize) -> Self {
         Self {
             class_indices,
             bin_size,
         }
     }
-    pub fn num_classes(&self) -> usize {
+    pub const fn num_classes(&self) -> usize {
         self.class_indices.len()
     }
-    pub fn bin_size(&self) -> usize {
+    pub const fn bin_size(&self) -> usize {
         self.bin_size
     }
 }

@@ -17,13 +17,13 @@ pub struct ConfusionMatrix {
 }
 
 impl ConfusionMatrix {
-    pub fn new(element:String) -> Self {
+    pub const fn new(element: String) -> Self {
         Self {
             element,
             true_positive: 0,
             true_negative: 0,
             false_positive: 0,
-            false_negative: 0
+            false_negative: 0,
         }
     }
 }
@@ -33,14 +33,21 @@ pub fn create_confusion_matrices<B: Backend>(
     items: &[SpectrumSample],
     class_indices: &[usize],
     threshold: f64,
-) -> Result<Vec<ConfusionMatrix>,SpectraError> {
-    let mut confusion_matrices: Vec<ConfusionMatrix> = class_indices.iter().map(|&class_index| ConfusionMatrix::new(ELEMENTS[class_index].symbol().to_string())).collect();
+) -> Result<Vec<ConfusionMatrix>, SpectraError> {
+    let mut confusion_matrices: Vec<ConfusionMatrix> = class_indices
+        .iter()
+        .map(|&class_index| ConfusionMatrix::new(ELEMENTS[class_index].symbol().to_string()))
+        .collect();
 
     let predicted_tensor = predictions.greater_elem(threshold).int();
     let pred_iter = predicted_tensor.iter_dim(0);
 
     for (prediction_row, sample) in pred_iter.into_iter().zip(items.iter()) {
-        let [output_data] = Transaction::default().register(prediction_row).execute().try_into().expect("Correct amount of the tensor data");
+        let [output_data] = Transaction::default()
+            .register(prediction_row)
+            .execute()
+            .try_into()
+            .expect("Correct amount of the tensor data");
         let predicted_values = output_data.as_slice::<i32>()?;
         for (prediction_column, &class_index) in class_indices.iter().enumerate() {
             let predicted_atom = predicted_values[prediction_column];
@@ -58,4 +65,3 @@ pub fn create_confusion_matrices<B: Backend>(
     }
     Ok(confusion_matrices)
 }
-

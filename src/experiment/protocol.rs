@@ -1,8 +1,8 @@
-use rand::{rngs::ChaCha8Rng, seq::SliceRandom, SeedableRng};
+use rand::{SeedableRng, rngs::ChaCha8Rng, seq::SliceRandom};
 
 use crate::{
     data::SpectrumSample,
-    dataset::{observed_class_indices, SpectraData},
+    dataset::{SpectraData, observed_class_indices},
     holdout::{BasicHoldout, Holdout},
 };
 
@@ -39,16 +39,18 @@ impl ExperimentProtocol for RandomSplitProtocol {
     }
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType> {
         let class_indices = observed_class_indices(dataset.samples());
-        (0..self.number_of_holdouts).map(|holdout_number| {
-            let holdout_seed = self.random_seed + holdout_number as u64;
-            make_random_holdout(
-                dataset,
-                &class_indices,
-                holdout_number,
-                holdout_seed,
-                self.training_size
-            )
-        }).collect()
+        (0..self.number_of_holdouts)
+            .map(|holdout_number| {
+                let holdout_seed = self.random_seed + holdout_number as u64;
+                make_random_holdout(
+                    dataset,
+                    &class_indices,
+                    holdout_number,
+                    holdout_seed,
+                    self.training_size,
+                )
+            })
+            .collect()
     }
 }
 
@@ -72,29 +74,32 @@ impl ExperimentProtocol for StratifiedRetryProtocol {
         self.training_size
     }
     fn generate_holdouts(&self, dataset: &SpectraData) -> Vec<Self::HoldoutType> {
-        let class_indices= observed_class_indices(dataset.samples());
+        let class_indices = observed_class_indices(dataset.samples());
         let attempts = self.retries_per_holdout.max(1);
-        (0..self.number_of_holdouts) .map(|holdout_number| {
-            let mut best: Option<(f32, Vec<SpectrumSample>, Vec<SpectrumSample>, u64)> = None;
-            for attempt in 0..attempts {
-                let seed = self.random_seed + holdout_number as u64 *10_000 + attempt as u64;
-                let (train, validation) = random_split(dataset, seed, self.training_size);
-                let score = split_score(&train, &validation, &class_indices, self.training_size);
-                match &best {
-                    Some((best_score, _,_,_)) if *best_score <= score => {},
-                    _ => best = Some((score, train, validation, seed)),
+        (0..self.number_of_holdouts)
+            .map(|holdout_number| {
+                let mut best: Option<(f32, Vec<SpectrumSample>, Vec<SpectrumSample>, u64)> = None;
+                for attempt in 0..attempts {
+                    let seed = self.random_seed + holdout_number as u64 * 10_000 + attempt as u64;
+                    let (train, validation) = random_split(dataset, seed, self.training_size);
+                    let score =
+                        split_score(&train, &validation, &class_indices, self.training_size);
+                    match &best {
+                        Some((best_score, _, _, _)) if *best_score <= score => {}
+                        _ => best = Some((score, train, validation, seed)),
+                    }
                 }
-            }
-            let (_score, train, validation, seed) = best.expect("Need at least one split attempt");
-            BasicHoldout::new(
-                SpectraData::from_samples(train, dataset.bin_size()),
-                SpectraData::from_samples(validation, dataset.bin_size()),
-                class_indices.clone(),
-                holdout_number,
-                seed as usize,
-            )
-        })
-        .collect()
+                let (_score, train, validation, seed) =
+                    best.expect("Need at least one split attempt");
+                BasicHoldout::new(
+                    SpectraData::from_samples(train, dataset.bin_size()),
+                    SpectraData::from_samples(validation, dataset.bin_size()),
+                    class_indices.clone(),
+                    holdout_number,
+                    seed as usize,
+                )
+            })
+            .collect()
     }
 }
 
@@ -111,7 +116,7 @@ fn make_random_holdout(
         SpectraData::from_samples(validation, dataset.bin_size()),
         class_indices.to_vec(),
         holdout_number,
-        holdout_seed as usize
+        holdout_seed as usize,
     )
 }
 
@@ -140,8 +145,14 @@ fn split_score(
     let expected_validation_fraction = 1.0 - training_size;
     let mut score = 0.0;
     for &class_index in class_indices {
-        let train_positive =  train.iter().filter(|sample| sample.element_present[class_index]).count();
-        let validation_positive = validation.iter().filter(|sample| sample.element_present[class_index]).count();
+        let train_positive = train
+            .iter()
+            .filter(|sample| sample.element_present[class_index])
+            .count();
+        let validation_positive = validation
+            .iter()
+            .filter(|sample| sample.element_present[class_index])
+            .count();
         let total_positive = train_positive + validation_positive;
         if total_positive == 0 {
             continue;

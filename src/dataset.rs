@@ -24,6 +24,14 @@ impl SpectraData {
         })
     }
 
+    pub const fn from_samples(dataset: Vec<SpectrumSample>, bin_size: usize) -> Self {
+        Self { dataset, bin_size }
+    }
+
+    pub fn samples(&self) -> &[SpectrumSample] {
+        &self.dataset
+    }
+
     pub fn class_weights_for(&self, class_indices: &[usize], weight_range: (f32, f32)) -> Vec<f32> {
         let (min_weight, max_weight) = weight_range;
         let n_samples = self.dataset.len() as f32;
@@ -42,9 +50,25 @@ impl SpectraData {
             })
             .collect()
     }
-    pub fn bin_size(&self) -> usize {
+    pub const fn bin_size(&self) -> usize {
         self.bin_size
     }
+}
+
+pub fn observed_class_indices(samples: &[SpectrumSample]) -> Vec<usize> {
+    let mut observed = vec![false; ELEMENT_COUNT];
+    for sample in samples {
+        for (index, present) in sample.element_present.iter().enumerate() {
+            if *present {
+                observed[index] = true;
+            }
+        }
+    }
+    observed
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, present)| present.then_some(index))
+        .collect()
 }
 
 fn load_spectra(bin_size: usize) -> Result<Vec<SpectrumSample>, SpectraError> {
@@ -60,7 +84,7 @@ fn load_spectra(bin_size: usize) -> Result<Vec<SpectrumSample>, SpectraError> {
         };
         let spectra = spec
             .linear_binned_intensities(0.0, 1000.0, bin_size)?
-            .to_vec();
+            .clone();
         output.push(SpectrumSample {
             spectra,
             element_present: *spec_occurrence(formula)

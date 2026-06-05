@@ -4,6 +4,7 @@ use burn::{
 };
 
 #[derive(Module, Debug)]
+/// Definition for the model
 pub struct Model<B: Backend> {
     linear1: Linear<B>,
     batch_norm1: BatchNorm<B>,

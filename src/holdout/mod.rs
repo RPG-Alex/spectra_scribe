@@ -2,7 +2,7 @@ pub mod basic_holdout;
 pub mod report;
 
 pub use basic_holdout::BasicHoldout;
-pub use report::{class_distribution_report, ClassDistribution};
+pub use report::class_distribution_report;
 
 use crate::{data::SpectrumSample, dataset::SpectraData};
 

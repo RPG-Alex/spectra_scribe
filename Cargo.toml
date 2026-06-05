@@ -2,6 +2,11 @@
 name = "SpectraScribe"
 version = "0.1.0"
 edition = "2024"
+description = "Machine learning tool for training a  model for MS/MS element identification"
+license = "MIT"
+repository = "https://github.com/RPG-Alex/SpectraScribe"
+keywords = ["Machine Learning", "Burn", "Mass Spectrometry", "Bioinformatics", "Chemistry"]
+categories = ["Machine Learning", "Bioinformatics"]
 
 [dependencies]
 burn = { version = "0.21.0", features = ["fusion", "metrics", "std", "train", "tui", "vision", "wgpu", "autotune"]}
@@ -16,7 +21,6 @@ serde = "1.0.228"
 csv = "1.4.0"
 
 [lints.rust]
-missing_docs = "forbid"
 unused_must_use = "forbid"
 unused_import_braces = "forbid"
 unconditional_recursion = "forbid"
