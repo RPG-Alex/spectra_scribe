@@ -15,6 +15,8 @@ use core::marker::PhantomData;
 use std::sync::Arc;
 
 #[derive(Clone)]
+
+/// Burn training metric for multi-label Matthews correlation coefficient.
 pub struct MatthewsCorrelationMetric<B: Backend> {
     name: Arc<String>,
     state: NumericMetricState,
@@ -23,14 +25,35 @@ pub struct MatthewsCorrelationMetric<B: Backend> {
     _b: PhantomData<B>,
 }
 
+/// Input batch used by [`MatthewsCorrelationMetric`].
 pub struct MCCInput<B: Backend> {
     outputs: Tensor<B, 2>,
     targets: Tensor<B, 2, Int>,
 }
 
 impl<B: Backend> MatthewsCorrelationMetric<B> {
+    /// Creates a new MCC metric with the default threshold.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets the decision threshold used to convert outputs into labels.
+    ///
+    /// # Parameters
+    /// - `threshold` - The threshold above which an output is treated as a positive prediction.
+    pub fn with_threshold(mut self, threshold: f32) -> Self {
+        self.threshold = threshold;
+        self.name = Arc::new(format!("MCC Score @ Threshold({threshold})"));
+        self
+    }
+
+    /// Enables or disables sigmoid activation before thresholding.
+    ///
+    /// # Parameters
+    /// - `sigmoid` - Whether to apply sigmoid before computing binary predictions.
+    pub fn with_sigmoid(mut self, sigmoid: bool) -> Self {
+        self.sigmoid = sigmoid;
+        self
     }
 }
 
@@ -67,28 +90,30 @@ where
             outputs = sigmoid(outputs);
         }
 
-        let preds_f = outputs.greater_elem(self.threshold).float();
+        let predictions = outputs.greater_elem(self.threshold).float();
+        let targets = targets.float();
 
-        let targets_f = targets.float();
+        let ones = Tensor::<B, 2>::ones_like(&predictions);
 
-        let ones = Tensor::<B, 2>::ones_like(&preds_f);
+        let true_positives = (predictions.clone() * targets.clone()).sum_dim(1);
 
-        let tp = (preds_f.clone() * targets_f.clone()).sum_dim(1);
+        let true_negatives =
+            ((ones.clone() - predictions.clone()) * (ones.clone() - targets.clone())).sum_dim(1);
 
-        let tn = ((ones.clone() - preds_f.clone()) * (ones.clone() - targets_f.clone())).sum_dim(1);
+        let false_positives = (predictions.clone() * (ones.clone() - targets.clone())).sum_dim(1);
 
-        let fp = (preds_f.clone() * (ones.clone() - targets_f.clone())).sum_dim(1);
+        let false_negatives = ((ones - predictions) * targets).sum_dim(1);
 
-        let fn_ = ((ones - preds_f) * targets_f).sum_dim(1);
+        let numerator = true_positives.clone() * true_negatives.clone()
+            - false_positives.clone() * false_negatives.clone();
 
-        let numerator = tp.clone() * tn.clone() - fp.clone() * fn_.clone();
-
-        let denominator =
-            ((tp.clone() + fp.clone()) * (tp + fn_.clone()) * (tn.clone() + fp) * (tn + fn_))
-                .sqrt();
+        let denominator = ((true_positives.clone() + false_positives.clone())
+            * (true_positives + false_negatives.clone())
+            * (true_negatives.clone() + false_positives)
+            * (true_negatives + false_negatives))
+            .sqrt();
 
         let mcc = numerator / denominator.clamp_min(1e-12);
-
         let mcc_value = mcc.mean().into_scalar();
 
         self.state.update(
