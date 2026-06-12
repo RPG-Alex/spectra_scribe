@@ -1,5 +1,5 @@
 [package]
-name = "SpectraScribe"
+name = "spectra_scribe"
 version = "0.1.0"
 edition = "2024"
 publish = false
@@ -7,21 +7,30 @@ description = "Machine learning tool for training MS/MS element-identification m
 license = "MIT"
 repository = "https://github.com/RPG-Alex/SpectraScribe"
 keywords = [
-"machine-learning",
-"burn",
-"mass-spectrometry",
-"bioinformatics",
-"chemistry",
+  "machine-learning",
+  "burn",
+  "mass-spectrometry",
+  "bioinformatics",
+  "chemistry",
 ]
 
 categories = [
-"science",
-"science::bioinformatics",
-"science::computational-chemistry",
+  "science",
+  "science::bioinformatics",
+  "science::computational-chemistry",
 ]
 
 [dependencies]
-burn = { version = "0.21.0", features = ["fusion", "metrics", "std", "train", "tui", "vision", "wgpu", "autotune"]}
+burn = { version = "0.21.0", features = [
+  "fusion",
+  "metrics",
+  "std",
+  "train",
+  "tui",
+  "vision",
+  "wgpu",
+  "autotune",
+] }
 elements_rs = "0.2.7"
 mascot-rs = { git = "https://github.com/LucaCappelletti94/mascot-rs" }
 molecular-formulas = "0.1.10"
