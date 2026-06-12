@@ -1,5 +1,6 @@
 use crate::{
     data::{SpectraScribeBatch, SpectraScribeBatcher},
+    error::SpectraError,
     holdout::Holdout,
     mcc::MatthewsCorrelationMetric,
     model::{Model, ModelConfig},
@@ -20,12 +21,13 @@ use burn::{
 };
 
 impl<B: Backend> Model<B> {
-    pub fn forward_classification(
+    /// Computes logits, weighted binary cross-entropy loss, and activated multi-label predictions.
+    fn forward_classification(
         &self,
         spectra: Tensor<B, 2>,
         targets: Tensor<B, 2, Int>,
     ) -> MultiLabelClassificationOutput<B> {
-        let logits = self.forward_logit(spectra);
+        let logits = self.forward_logits(spectra);
         let loss_bce = BinaryCrossEntropyLossConfig::new()
             .with_logits(true)
             .with_weights(self.class_weights())
@@ -57,18 +59,38 @@ impl<B: Backend> InferenceStep for Model<B> {
 }
 
 #[derive(Config, Debug)]
+/// Configuration used to train one model on one holdout split.
 pub struct TrainingConfig {
-    pub model: ModelConfig,
-    pub optimizer: AdamConfig,
-    pub num_epochs: usize,
-    pub batch_size: usize,
-    pub num_workers: usize,
-    pub seed: u64,
-    pub learning_rate: f64,
-    pub class_indices: Vec<usize>,
+    /// Model architecture and initialization settings.
+    model: ModelConfig,
+    /// Optimizer configuration used during training.
+    optimizer: AdamConfig,
+    /// Number of training epochs.
+    num_epochs: usize,
+    /// Number of samples per batch.
+    batch_size: usize,
+    /// Number of workers used by the data loaders.
+    num_workers: usize,
+    /// Random seed used for reproducible training.
+    seed: u64,
+    /// Optimizer learning rate.
+    learning_rate: f64,
+    /// Element class indices included in this training run.
+    class_indices: Vec<usize>,
 }
 
 impl TrainingConfig {
+    /// Creates a new [`TrainingConfig`] from explicit training values.
+    ///
+    /// # Parameters
+    /// - `model` - The [`ModelConfig`] used to initialize the model.
+    /// - `num_epochs` - The number of training epochs.
+    /// - `batch_size` - The number of samples per training batch.
+    /// - `num_workers` - The number of data-loader workers.
+    /// - `seed` - The random seed used for reproducible training.
+    /// - `learning_rate` - The optimizer learning rate.
+    /// - `class_indices` - The class indices included in this training run,
+    ///   referencing `crate::data::ELEMENTS`.
     pub fn new_with_values(
         model: ModelConfig,
         num_epochs: usize,
@@ -89,24 +111,37 @@ impl TrainingConfig {
             class_indices,
         }
     }
+
+    /// Returns the model configuration used for training.
+    pub(crate) fn model(&self) -> &ModelConfig {
+        &self.model
+    }
+
+    /// Returns the class indices included in this training run.
+    pub(crate) fn class_indices(&self) -> &[usize] {
+        &self.class_indices
+    }
 }
 
-fn create_artifact_dir(artifact_dir: &str) {
+fn create_artifact_dir(artifact_dir: &str) -> Result<(), SpectraError> {
     // Remove existing artifacts before to get an accurate learner summary
-    std::fs::remove_dir_all(artifact_dir).ok();
-    std::fs::create_dir_all(artifact_dir).ok();
+    std::fs::remove_dir_all(artifact_dir)?;
+    std::fs::create_dir_all(artifact_dir)?;
+    Ok(())
 }
 
+/// Trains a model on one holdout split and saves the resulting artifacts.
 pub fn train_holdout<B, H>(
     artifact_dir: &str,
     holdout: &H,
     config: TrainingConfig,
     device: B::Device,
-) where
+) -> Result<(), SpectraError>
+where
     B: AutodiffBackend,
     H: Holdout,
 {
-    create_artifact_dir(artifact_dir);
+    create_artifact_dir(artifact_dir)?;
     config
         .save(format!("{artifact_dir}/config.json"))
         .expect("Config should be saved successfully");
@@ -150,4 +185,6 @@ pub fn train_holdout<B, H>(
         .model
         .save_file(format!("{artifact_dir}/model"), &CompactRecorder::new())
         .expect("Trained model should be saved successfully");
+
+    Ok(())
 }
