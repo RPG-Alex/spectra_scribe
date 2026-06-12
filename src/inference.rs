@@ -1,5 +1,6 @@
 use crate::{
     data::{SpectraScribeBatcher, SpectrumSample},
+    error::SpectraError,
     training::TrainingConfig,
 };
 
@@ -9,20 +10,24 @@ use burn::{
     record::{CompactRecorder, Recorder},
 };
 
+/// Runs inference using a trained model artifact directory.
+///
+///  # Parameters
+/// - `artifact_dir` - Directory containing `config.json` and the saved model record.
+/// - `device` - Backend device used to load the model and run inference.
+/// - `items` - Spectrum samples to evaluate.
 pub fn infer<B: Backend>(
     artifact_dir: &str,
     device: &B::Device,
     items: Vec<SpectrumSample>,
-) -> Tensor<B, 2> {
-    let config = TrainingConfig::load(format!("{artifact_dir}/config.json"))
-        .expect("Config should exist for the model; run train first");
-    let record = CompactRecorder::new()
-        .load(format!("{artifact_dir}/model").into(), device)
-        .expect("Trained model should exist; run train first");
+) -> Result<Tensor<B, 2>, SpectraError> {
+    let config = TrainingConfig::load(format!("{artifact_dir}/config.json"))?;
+    let record = CompactRecorder::new().load(format!("{artifact_dir}/model").into(), device)?;
 
-    let model = config.model.init::<B>(device).load_record(record);
+    let model = config.model().init::<B>(device).load_record(record);
 
-    let batcher = SpectraScribeBatcher::new(config.class_indices.clone(), config.model.bin_size());
+    let batcher =
+        SpectraScribeBatcher::new(config.class_indices().to_vec(), config.model().bin_size());
     let batch = batcher.batch(items, device);
-    model.forward(batch.spectra)
+    Ok(model.forward(batch.spectra))
 }
