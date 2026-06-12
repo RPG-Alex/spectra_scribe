@@ -18,15 +18,26 @@ pub struct Model<B: Backend> {
 }
 
 #[derive(Config, Debug)]
+/// Configuration for constructing a SpectraScribe multi-label classification model.
 pub struct ModelConfig {
+    /// Number of element classes predicted by the model.
     num_classes: usize,
+    /// Number of neurons in the first hidden layer.
     hidden_size: usize,
+    /// Number of binned intensity features in each input spectrum.
     bin_size: usize,
+    /// Dropout probability applied during training.
     dropout: f64,
+    /// Optional per-class weights used by the binary cross-entropy loss.
     class_weights: Option<Vec<f32>>,
 }
 
 impl ModelConfig {
+    /// Initializes a [`Model`] from this configuration on the provided backend device.
+    ///
+    /// # Parameters
+    ///
+    /// - `device` - The backend device used to initialize model parameters.
     pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         Model {
             linear1: LinearConfig::new(self.bin_size, self.hidden_size).init(device),
@@ -41,13 +52,18 @@ impl ModelConfig {
         }
     }
 
+    /// Returns the number of binned intensity features expected by the model.
     pub fn bin_size(&self) -> usize {
         self.bin_size
     }
 }
 
 impl<B: Backend> Model<B> {
-    pub fn forward_logit(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {
+    /// Computes raw element-class logits for a batch of binned spectra.
+    ///
+    /// # Parameters
+    /// - `spectra` - Binned spectra features as `[batch_size, bin_size]`.
+    pub fn forward_logits(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {
         let [batch_size, binned_spectrum_size] = spectra.dims();
 
         let x = spectra.reshape([batch_size, binned_spectrum_size]);
@@ -64,12 +80,17 @@ impl<B: Backend> Model<B> {
         self.linear3.forward(x)
     }
 
+    /// Runs inference on spectra and returns activated multi-label predictions.
+    ///
+    /// # Parameters
+    /// - `spectra` - Binned spectra features with shape `[batch_size, bin_size]`.
     pub fn forward(&self, spectra: Tensor<B, 2>) -> Tensor<B, 2> {
-        let logits = self.forward_logit(spectra);
+        let logits = self.forward_logits(spectra);
         self.activation.forward(logits)
     }
 
-    pub(crate) fn class_weights(&self) -> Option<Vec<f32>> {
+    /// Returns the optional per-class loss weights.
+    pub fn class_weights(&self) -> Option<Vec<f32>> {
         self.class_weights.clone()
     }
 }
